@@ -271,7 +271,15 @@ body::after{
 .room-code-display{
   background:var(--bg2);border:1px dashed var(--border2);
   border-radius:14px;padding:1.1rem;text-align:center;margin-bottom:.9rem;
+  transition:border-color .15s, background .15s;
 }
+.room-code-display:hover{border-color:var(--accent);background:var(--accent-bg)}
+.room-code-display:active{transform:scale(.98)}
+.room-code-copy-hint{
+  font-size:.72rem;color:var(--muted);margin-top:.4rem;
+  transition:color .15s;
+}
+.room-code-display:hover .room-code-copy-hint{color:var(--accent2)}
 .room-code-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:.4rem}
 .room-code-value{
   font-family:'DM Mono',monospace;font-size:2rem;font-weight:500;
@@ -1024,16 +1032,17 @@ body::after{
 
       <!-- Waiting room (replaces create form once room exists) -->
       <div id="waiting-section" style="display:none">
-        <div class="room-code-display">
-          <div class="room-code-label" id="lbl-room-code">Código de Sala — compartí con todos</div>
+        <div class="room-code-display" onclick="copyRoomCode()" title="Copiar código" style="cursor:pointer">
+          <div class="room-code-label" id="lbl-room-code">Código de Sala — tocá para copiar</div>
           <div class="room-code-value" id="room-code-value">———</div>
+          <div class="room-code-copy-hint" id="room-code-copy-hint">📋 Copiar</div>
         </div>
 
         <!-- Game settings summary -->
         <div class="settings-summary" id="settings-summary">
           <div class="settings-summary-row">
             <span class="settings-chips" id="settings-chips-display"></span>
-            <button class="settings-edit-btn" id="settings-edit-btn" onclick="openSettingsEdit()" style="display:none">✏️ Editar</button>
+            <button class="settings-edit-btn" id="settings-edit-btn" onclick="openSettingsEdit()">✏️ Editar</button>
           </div>
         </div>
 
@@ -2155,14 +2164,30 @@ function renderSettingsSummary(hostView, roomData){
     {label:timerLabel,active:useTimer},
   ];
   container.innerHTML=chips.map(ch=>`<span class="settings-chip${ch.active?' active':''}">${ch.label}</span>`).join('');
-  if(editBtn) editBtn.style.display=hostView?'':'none';
+  if(editBtn) editBtn.style.display='';
 }
 
 window.openSettingsEdit=()=>{
-  // Hide waiting section, show create section (settings form) without clearing the room
+  // Sync local UI from current room data so non-hosts see correct state
+  if(gstate){
+    selectedMode=gstate.mode||selectedMode;
+    selectedSize=gstate.gridSize||selectedSize;
+    selectedTheme=gstate.theme||selectedTheme;
+    selectedLives=gstate.maxLives!==undefined?gstate.maxLives:selectedLives;
+    numTeams=gstate.numTeams||numTeams;
+    const tt=document.getElementById('timer-toggle');
+    const ts=document.getElementById('timer-secs');
+    const lt=document.getElementById('lives-toggle');
+    const ls=document.getElementById('lives-select');
+    if(tt){tt.checked=!!gstate.useTimer;if(ts)ts.disabled=!tt.checked;}
+    if(ts&&gstate.timerSecs)ts.value=gstate.timerSecs;
+    if(lt){lt.checked=selectedLives>0;if(ls){ls.disabled=selectedLives===0;ls.value=selectedLives||2;}}
+    ['coop','teams'].forEach(m=>document.getElementById('mode-btn-'+m)?.classList.toggle('active',m===selectedMode));
+    [3,4,5,6].forEach(n=>document.getElementById('size-btn-'+n)?.classList.toggle('active',n===selectedSize));
+    ['classic','football'].forEach(th=>document.getElementById('theme-btn-'+th)?.classList.toggle('active',th===selectedTheme));
+  }
   document.getElementById('waiting-section').style.display='none';
   document.getElementById('create-section').style.display='';
-  // Show a "confirm changes" button instead of "create room"
   const createBtn=document.getElementById('btn-create');
   if(createBtn){createBtn.textContent=lang==='es'?'Guardar cambios →':'Save changes →';createBtn.onclick=saveSettingsEdit;}
 };
@@ -2184,11 +2209,6 @@ window.saveSettingsEdit=async()=>{
 function renderLobbyPlayers(players){
   const list=document.getElementById('lobby-players-list');
   if(!list) return;
-  // Refresh settings summary if we have room data
-  if(!isHost && gstate){
-  } else if(isHost){
-    renderSettingsSummary(true);
-  }
   list.innerHTML='';
   players.forEach((p,i)=>{
     const chip=document.createElement('div');chip.className='player-chip';
@@ -3089,7 +3109,13 @@ function resetToLobby(){
   closeModal('gameover-modal');closeModal('ready-modal');closeModal('win-modal');
   showScreen('lobby');applyLobbyTrans();
 }
-window.copyRoomCode=()=>{if(!roomId)return;navigator.clipboard.writeText(roomId).catch(()=>{});showToast(t('copiedCode'));};
+window.copyRoomCode=()=>{
+  if(!roomId)return;
+  navigator.clipboard.writeText(roomId).catch(()=>{});
+  showToast(t('copiedCode'));
+  const hint=document.getElementById('room-code-copy-hint');
+  if(hint){hint.textContent='✓ ¡Copiado!';setTimeout(()=>{hint.textContent='📋 Copiar';},2000);}
+};
 
 applyLobbyTrans();
 
