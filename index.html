@@ -435,6 +435,7 @@ body::after{
   transition:all .2s;
 }
 .team-score-chip.active-team{transform:scale(1.04);box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.team-score-chip.team-finished{opacity:.55}
 .team-score-n{font-size:1.2rem;line-height:1}
 .team-score-label{font-size:.56rem;text-transform:uppercase;letter-spacing:.07em;opacity:.7;margin-top:.1rem}
 
@@ -1034,15 +1035,6 @@ body::after{
             <span class="settings-chips" id="settings-chips-display"></span>
             <button class="settings-edit-btn" id="settings-edit-btn" onclick="openSettingsEdit()" style="display:none">✏️ Editar</button>
           </div>
-        </div>
-
-        <!-- Settings summary — visible to all, edit button only for host -->
-        <div class="settings-summary" id="settings-summary">
-          <div class="settings-summary-row">
-            <div class="settings-summary-title">Configuración de la partida</div>
-            <button class="btn-edit-settings" id="btn-edit-settings" onclick="toggleEditSettings()" style="display:none">✏️ Editar</button>
-          </div>
-          <div class="settings-chips" id="settings-chips"></div>
         </div>
 
         <div class="players-in-room">
@@ -1916,93 +1908,7 @@ try{
   }
 }catch(e){}
 
-// ── SETTINGS SUMMARY ─────────────────────────────────────────
-function renderSettingsSummary(isHost){
-  const chipsEl=document.getElementById('settings-chips');
-  const editBtn=document.getElementById('btn-edit-settings');
-  if(!chipsEl) return;
-  if(isHost && editBtn) editBtn.style.display='';
 
-  const modeLabel=selectedMode==='coop'
-    ?(lang==='es'?'🤝 Cooperativo':'🤝 Cooperative')
-    :(lang==='es'?'⚔️ Equipos':'⚔️ Teams');
-  const sizeLabel=`${selectedSize}×${selectedSize}`;
-  const themeLabel=selectedTheme==='football'
-    ?(lang==='es'?'⚽ Fútbol':'⚽ Football')
-    :(lang==='es'?'🌍 Clásica':'🌍 Classic');
-  const timerOn=document.getElementById('timer-toggle')?.checked;
-  const timerSecs=parseInt(document.getElementById('timer-secs')?.value||'90');
-  const livesOn=selectedLives>0;
-
-  const chips=[
-    {label:modeLabel,active:true},
-    {label:sizeLabel,active:false},
-    {label:themeLabel,active:false},
-  ];
-  if(timerOn) chips.push({label:(lang==='es'?`⏱ ${timerSecs}s`:`⏱ ${timerSecs}s`),active:true});
-  if(livesOn) chips.push({label:(lang==='es'?`❤️ ${selectedLives} vida(s)`:`❤️ ${selectedLives} life`),active:true});
-
-  chipsEl.innerHTML='';
-  chips.forEach(({label,active})=>{
-    const s=document.createElement('span');
-    s.className='settings-chip'+(active?' active':'');
-    s.textContent=label;
-    chipsEl.appendChild(s);
-  });
-}
-
-function renderSettingsSummaryFromRoom(data){
-  const chipsEl=document.getElementById('settings-chips');
-  if(!chipsEl) return;
-  const mode=data.mode||'coop';
-  const gs=data.gridSize||4;
-  const th=data.theme||'classic';
-  const ml=data.maxLives||0;
-  const ut=data.useTimer||false;
-  const ts=data.timerSecs||90;
-  const L=data.lang||'es';
-
-  const modeLabel=mode==='coop'
-    ?(L==='es'?'🤝 Cooperativo':'🤝 Cooperative')
-    :(L==='es'?'⚔️ Equipos':'⚔️ Teams');
-  const themeLabel=th==='football'
-    ?(L==='es'?'⚽ Fútbol':'⚽ Football')
-    :(L==='es'?'🌍 Clásica':'🌍 Classic');
-
-  const chips=[
-    {label:modeLabel,active:true},
-    {label:`${gs}×${gs}`,active:false},
-    {label:themeLabel,active:false},
-  ];
-  if(ut) chips.push({label:`⏱ ${ts}s`,active:true});
-  if(ml>0) chips.push({label:L==='es'?`❤️ ${ml} vida(s)`:`❤️ ${ml} life`,active:true});
-
-  chipsEl.innerHTML='';
-  chips.forEach(({label,active})=>{
-    const s=document.createElement('span');
-    s.className='settings-chip'+(active?' active':'');
-    s.textContent=label;
-    chipsEl.appendChild(s);
-  });
-}
-
-window.toggleEditSettings=()=>{
-  // Show/hide the create form for editing
-  const createSection=document.getElementById('create-section');
-  const waitingSection=document.getElementById('waiting-section');
-  const editBtn=document.getElementById('btn-edit-settings');
-  if(!createSection||!isHost) return;
-  const isEditing=createSection.style.display!=='none';
-  if(isEditing){
-    // Save / close edit — re-render summary
-    createSection.style.display='none';
-    if(editBtn) editBtn.textContent=lang==='es'?'✏️ Editar':'✏️ Edit';
-    renderSettingsSummary(true);
-  } else {
-    createSection.style.display='';
-    if(editBtn) editBtn.textContent=lang==='es'?'✓ Guardar':'✓ Save';
-  }
-};
 
 applyLobbyTrans();
 function applyLobbyTrans(){
@@ -2144,7 +2050,6 @@ window.joinRoom=async()=>{
   document.getElementById('teams-config').style.display='none';
   // Show settings summary for joining player (based on room data)
   const _snap=await get(roomRef);
-  if(_snap.exists()){const _d=_snap.val();renderSettingsSummaryFromRoom(_d);}
 };
 function showJoinError(msg){const el=document.getElementById('join-status');el.textContent=msg;el.className='status-msg error';el.style.display='';}
 
@@ -2281,7 +2186,6 @@ function renderLobbyPlayers(players){
   if(!list) return;
   // Refresh settings summary if we have room data
   if(!isHost && gstate){
-    renderSettingsSummaryFromRoom(gstate);
   } else if(isHost){
     renderSettingsSummary(true);
   }
@@ -2428,12 +2332,20 @@ function renderGame(data, prevPhase){
   const bar=document.getElementById('teams-score-bar');
   if(mode==='teams'&&g.teams){
     bar.style.display='';bar.innerHTML='';
+    const guessedSet2=new Set(g.guessed||[]);
+    const missedSet2=new Set(g.missed||[]);
     for(let n=1;n<=(g.numTeams||2);n++){
       const td=g.teams[n];const tc=TEAM_COLORS[n];
+      const totalCells=(td?.assignedCells||[]).length;
+      const doneCells=(td?.assignedCells||[]).filter(cell=>guessedSet2.has(cell)).length;
+      const pendingCells=totalCells-doneCells;
+      const isFinished=pendingCells===0;
       const chip=document.createElement('div');
-      chip.className='team-score-chip'+(n===activeTeamN?' active-team':'');
-      chip.style.cssText=`background:${tc.bg};border-color:${tc.hex};color:${tc.hex}`;
-      chip.innerHTML=`<div class="team-score-n">${td?.score||0}</div><div class="team-score-label">${tc.label} ${t('team',n)}${n===activeTeamN?' 🎯':''}</div>`;
+      chip.className='team-score-chip'+(n===activeTeamN?' active-team':'')+(isFinished?' team-finished':'');
+      chip.style.cssText=`background:${tc.bg};border-color:${isFinished?tc.hex+'88':tc.hex};color:${tc.hex}`;
+      chip.innerHTML=`
+        <div class="team-score-n">${doneCells}<span style="font-size:.55em;opacity:.65">/${totalCells}</span></div>
+        <div class="team-score-label">${tc.label}${n===activeTeamN?' 🎯':''}${isFinished?' ✓':''}</div>`;
       bar.appendChild(chip);
     }
   } else {bar.style.display='none';}
@@ -3167,9 +3079,8 @@ function resetToLobby(){
   if(lobbyColumnsR) lobbyColumnsR.style.gridTemplateColumns='';
   ['waiting-section','join-status','teams-config'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('join-code').value='';
-  const _editBtn=document.getElementById('btn-edit-settings');
-  if(_editBtn) _editBtn.style.display='none';
-  const _chips=document.getElementById('settings-chips');
+  
+  const _chips=document.getElementById('settings-chips-display');
   if(_chips) _chips.innerHTML='';
   document.getElementById('log-scroll').innerHTML='';
   document.getElementById('start-game-btn').style.display='';
