@@ -43,7 +43,7 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-html{font-size:17px}
+html{font-size:16px}
 
 body{
   font-family:'DM Sans',sans-serif;
@@ -174,7 +174,7 @@ body::after{
   font-family:'Bebas Neue',sans-serif;font-size:1.3rem;
   letter-spacing:.05em;color:var(--ink);
 }
-.panel-sub{font-size:.75rem;color:var(--muted);margin-top:.05rem}
+.panel-sub{font-size:.88rem;color:var(--muted);margin-top:.05rem}
 
 /* Section labels */
 .section-lbl{
@@ -278,6 +278,28 @@ body::after{
   letter-spacing:.22em;color:var(--accent2);
   text-shadow:0 0 20px rgba(124,109,250,.4);
 }
+.settings-summary{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:.6rem .85rem;margin-bottom:.85rem;
+}
+.settings-summary-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
+.settings-chips{display:flex;flex-wrap:wrap;gap:.35rem;flex:1}
+.settings-chip{
+  display:inline-flex;align-items:center;gap:.25rem;
+  padding:.2rem .52rem;border-radius:20px;
+  background:var(--tag-bg);border:1px solid var(--border);
+  font-size:.79rem;font-weight:500;color:var(--ink2);white-space:nowrap;
+}
+.settings-chip.active{
+  background:var(--accent-bg);border-color:rgba(124,109,250,.4);color:var(--accent2);
+}
+.settings-edit-btn{
+  padding:.28rem .65rem;border:1px solid var(--border);border-radius:8px;
+  background:transparent;font-family:'DM Sans',sans-serif;
+  font-size:.8rem;color:var(--muted);cursor:pointer;transition:all .15s;
+  white-space:nowrap;flex-shrink:0;
+}
+.settings-edit-btn:hover{border-color:var(--accent);color:var(--accent2)}
 .waiting-dots::after{content:'';animation:dots 1.4s infinite}
 @keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
 .status-msg{text-align:center;font-size:.87rem;color:var(--muted);padding:.4rem 0}
@@ -435,14 +457,14 @@ body::after{
 }
 .col-headers{display:flex;gap:5px}
 .col-hdr{
-  text-align:center;font-size:.74rem;font-weight:600;
+  text-align:center;font-size:.65rem;font-weight:600;
   color:var(--col-clr);text-transform:uppercase;letter-spacing:.04em;
   line-height:1.2;padding-bottom:4px;word-break:break-word;
   text-shadow:0 0 8px rgba(94,231,255,.3);
 }
 .grid-row-wrap{display:flex;align-items:center;gap:5px}
 .row-hdr{
-  text-align:right;padding-right:7px;font-size:.74rem;font-weight:600;
+  text-align:right;padding-right:7px;font-size:.65rem;font-weight:600;
   color:var(--row-clr);text-transform:uppercase;letter-spacing:.04em;
   line-height:1.2;word-break:break-word;
   text-shadow:0 0 8px rgba(255,107,138,.3);
@@ -514,8 +536,8 @@ body::after{
 }
 .cell-coord{
   position:absolute;bottom:2px;right:4px;
-  font-family:'DM Mono',monospace;font-size:.55rem;
-  color:var(--muted);opacity:.35;
+  font-family:'DM Mono',monospace;font-size:.56rem;
+  color:rgba(255,255,255,.55);opacity:1;
 }
 
 /* ── RIGHT PANEL ─────────────────────────────────── */
@@ -568,7 +590,7 @@ body::after{
 .tw-row{color:var(--row-clr);background:var(--row-bg)}
 .tw-col{color:var(--col-clr);background:var(--col-bg)}
 .tw-sep{color:var(--muted);font-size:.92rem}
-.hint-note{font-size:.72rem;color:var(--muted);font-style:italic;margin-top:.35rem}
+.hint-note{font-size:.9rem;color:var(--muted);font-style:italic;margin-top:.35rem}
 
 /* Clue input */
 .clue-field{
@@ -875,6 +897,38 @@ body::after{
   box-shadow:0 4px 20px rgba(0,0,0,.4);
 }
 .toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── SETTINGS SUMMARY (waiting room) ──────────────────── */
+.settings-summary{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:.65rem .8rem;margin-bottom:.65rem;
+  display:flex;flex-direction:column;gap:.35rem;
+}
+.settings-summary-row{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:.5rem;
+}
+.settings-summary-title{
+  font-size:.62rem;text-transform:uppercase;letter-spacing:.14em;
+  color:var(--muted);font-weight:600;margin-bottom:.1rem;
+}
+.settings-chips{display:flex;flex-wrap:wrap;gap:.28rem}
+.settings-chip{
+  font-size:.76rem;font-weight:500;padding:.18rem .52rem;
+  border-radius:20px;background:var(--tag-bg);
+  border:1px solid var(--border);color:var(--ink2);
+  white-space:nowrap;
+}
+.settings-chip.active{
+  background:var(--accent-bg);border-color:var(--accent);color:var(--accent2);
+}
+.btn-edit-settings{
+  font-size:.72rem;padding:.2rem .55rem;border-radius:7px;
+  background:transparent;border:1px solid var(--border);
+  color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;
+  font-family:'DM Sans',sans-serif;
+}
+.btn-edit-settings:hover{border-color:var(--accent);color:var(--accent2)}
 </style>
 </head>
 <body>
@@ -905,7 +959,7 @@ body::after{
         <div class="panel-icon panel-icon-create">🎮</div>
         <div>
           <div class="panel-title" id="lbl-panel-create">Crear Sala</div>
-          <div class="panel-sub" id="lbl-panel-create-sub">Configurá la partida y invitá amigos</div>
+          <div class="panel-sub" id="lbl-panel-create-sub">Configurá la partida e invitá amigos</div>
         </div>
       </div>
 
@@ -970,9 +1024,27 @@ body::after{
       <!-- Waiting room (replaces create form once room exists) -->
       <div id="waiting-section" style="display:none">
         <div class="room-code-display">
-          <div class="room-code-label" id="lbl-room-code">Código de Sala</div>
+          <div class="room-code-label" id="lbl-room-code">Código de Sala — compartí con todos</div>
           <div class="room-code-value" id="room-code-value">———</div>
         </div>
+
+        <!-- Game settings summary -->
+        <div class="settings-summary" id="settings-summary">
+          <div class="settings-summary-row">
+            <span class="settings-chips" id="settings-chips-display"></span>
+            <button class="settings-edit-btn" id="settings-edit-btn" onclick="openSettingsEdit()" style="display:none">✏️ Editar</button>
+          </div>
+        </div>
+
+        <!-- Settings summary — visible to all, edit button only for host -->
+        <div class="settings-summary" id="settings-summary">
+          <div class="settings-summary-row">
+            <div class="settings-summary-title">Configuración de la partida</div>
+            <button class="btn-edit-settings" id="btn-edit-settings" onclick="toggleEditSettings()" style="display:none">✏️ Editar</button>
+          </div>
+          <div class="settings-chips" id="settings-chips"></div>
+        </div>
+
         <div class="players-in-room">
           <span class="section-lbl" id="lbl-players-joined">Jugadores en la sala</span>
           <div class="players-list" id="lobby-players-list"></div>
@@ -1843,6 +1915,95 @@ try{
     if(jn) jn.value=saved;
   }
 }catch(e){}
+
+// ── SETTINGS SUMMARY ─────────────────────────────────────────
+function renderSettingsSummary(isHost){
+  const chipsEl=document.getElementById('settings-chips');
+  const editBtn=document.getElementById('btn-edit-settings');
+  if(!chipsEl) return;
+  if(isHost && editBtn) editBtn.style.display='';
+
+  const modeLabel=selectedMode==='coop'
+    ?(lang==='es'?'🤝 Cooperativo':'🤝 Cooperative')
+    :(lang==='es'?'⚔️ Equipos':'⚔️ Teams');
+  const sizeLabel=`${selectedSize}×${selectedSize}`;
+  const themeLabel=selectedTheme==='football'
+    ?(lang==='es'?'⚽ Fútbol':'⚽ Football')
+    :(lang==='es'?'🌍 Clásica':'🌍 Classic');
+  const timerOn=document.getElementById('timer-toggle')?.checked;
+  const timerSecs=parseInt(document.getElementById('timer-secs')?.value||'90');
+  const livesOn=selectedLives>0;
+
+  const chips=[
+    {label:modeLabel,active:true},
+    {label:sizeLabel,active:false},
+    {label:themeLabel,active:false},
+  ];
+  if(timerOn) chips.push({label:(lang==='es'?`⏱ ${timerSecs}s`:`⏱ ${timerSecs}s`),active:true});
+  if(livesOn) chips.push({label:(lang==='es'?`❤️ ${selectedLives} vida(s)`:`❤️ ${selectedLives} life`),active:true});
+
+  chipsEl.innerHTML='';
+  chips.forEach(({label,active})=>{
+    const s=document.createElement('span');
+    s.className='settings-chip'+(active?' active':'');
+    s.textContent=label;
+    chipsEl.appendChild(s);
+  });
+}
+
+function renderSettingsSummaryFromRoom(data){
+  const chipsEl=document.getElementById('settings-chips');
+  if(!chipsEl) return;
+  const mode=data.mode||'coop';
+  const gs=data.gridSize||4;
+  const th=data.theme||'classic';
+  const ml=data.maxLives||0;
+  const ut=data.useTimer||false;
+  const ts=data.timerSecs||90;
+  const L=data.lang||'es';
+
+  const modeLabel=mode==='coop'
+    ?(L==='es'?'🤝 Cooperativo':'🤝 Cooperative')
+    :(L==='es'?'⚔️ Equipos':'⚔️ Teams');
+  const themeLabel=th==='football'
+    ?(L==='es'?'⚽ Fútbol':'⚽ Football')
+    :(L==='es'?'🌍 Clásica':'🌍 Classic');
+
+  const chips=[
+    {label:modeLabel,active:true},
+    {label:`${gs}×${gs}`,active:false},
+    {label:themeLabel,active:false},
+  ];
+  if(ut) chips.push({label:`⏱ ${ts}s`,active:true});
+  if(ml>0) chips.push({label:L==='es'?`❤️ ${ml} vida(s)`:`❤️ ${ml} life`,active:true});
+
+  chipsEl.innerHTML='';
+  chips.forEach(({label,active})=>{
+    const s=document.createElement('span');
+    s.className='settings-chip'+(active?' active':'');
+    s.textContent=label;
+    chipsEl.appendChild(s);
+  });
+}
+
+window.toggleEditSettings=()=>{
+  // Show/hide the create form for editing
+  const createSection=document.getElementById('create-section');
+  const waitingSection=document.getElementById('waiting-section');
+  const editBtn=document.getElementById('btn-edit-settings');
+  if(!createSection||!isHost) return;
+  const isEditing=createSection.style.display!=='none';
+  if(isEditing){
+    // Save / close edit — re-render summary
+    createSection.style.display='none';
+    if(editBtn) editBtn.textContent=lang==='es'?'✏️ Editar':'✏️ Edit';
+    renderSettingsSummary(true);
+  } else {
+    createSection.style.display='';
+    if(editBtn) editBtn.textContent=lang==='es'?'✓ Guardar':'✓ Save';
+  }
+};
+
 applyLobbyTrans();
 function applyLobbyTrans(){
   const ids={'lg-sub':'sub','lbl-your-name':'yourName','lbl-join-name':'joinName',
@@ -1857,7 +2018,7 @@ function applyLobbyTrans(){
   Object.entries(ids).forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.textContent=t(k);});
   // Panel headers
   const pc=document.getElementById('lbl-panel-create');if(pc)pc.textContent=lang==='es'?'Crear Sala':'Create Room';
-  const pcs=document.getElementById('lbl-panel-create-sub');if(pcs)pcs.textContent=lang==='es'?'Configurá la partida y invitá amigos':'Set up the game and invite friends';
+  const pcs=document.getElementById('lbl-panel-create-sub');if(pcs)pcs.textContent=lang==='es'?'Configurá la partida e invitá amigos':'Set up the game and invite friends';
   const pj=document.getElementById('lbl-panel-join');if(pj)pj.textContent=lang==='es'?'Unirse':'Join';
   const pjs=document.getElementById('lbl-panel-join-sub');if(pjs)pjs.textContent=lang==='es'?'Ingresá a una sala existente':'Enter an existing room';
   const cn=document.getElementById('create-name');if(cn)cn.placeholder=t('p1def');
@@ -1950,6 +2111,7 @@ window.createRoom=async()=>{
   document.getElementById('waiting-section').style.display='';
   document.getElementById('room-code-value').textContent=roomId;
   listenRoom();
+  renderSettingsSummary(true);
 };
 
 // ── JOIN ROOM ─────────────────────────────────────────────────
@@ -1980,6 +2142,9 @@ window.joinRoom=async()=>{
   document.getElementById('room-code-value').textContent=roomId;
   document.getElementById('start-game-btn').style.display='none';
   document.getElementById('teams-config').style.display='none';
+  // Show settings summary for joining player (based on room data)
+  const _snap=await get(roomRef);
+  if(_snap.exists()){const _d=_snap.val();renderSettingsSummaryFromRoom(_d);}
 };
 function showJoinError(msg){const el=document.getElementById('join-status');el.textContent=msg;el.className='status-msg error';el.style.display='';}
 
@@ -1997,6 +2162,8 @@ function listenRoom(){
 
     if(data.status==='lobby'){
       renderLobbyPlayers(players);
+      // Show settings summary to everyone
+      renderSettingsSummary(isHost, data);
       if(isHost){
         document.getElementById('start-game-btn').disabled=players.length<2;
         if(players.length>=2){
@@ -2059,10 +2226,65 @@ function listenRoom(){
   });
 }
 
+// ── SETTINGS SUMMARY (waiting room) ───────────────────────────
+function renderSettingsSummary(hostView, roomData){
+  const container=document.getElementById('settings-chips-display');
+  const editBtn=document.getElementById('settings-edit-btn');
+  if(!container) return;
+  // Read from roomData (for non-hosts joining) or from local state (for host)
+  const mode=roomData?.mode||selectedMode||'coop';
+  const size=roomData?.gridSize||selectedSize||4;
+  const theme=roomData?.theme||selectedTheme||'classic';
+  const lives=roomData?.maxLives!==undefined?roomData.maxLives:selectedLives;
+  const useTimer=roomData?.useTimer!==undefined?roomData.useTimer:document.getElementById('timer-toggle')?.checked;
+  const timerSecs=roomData?.timerSecs||parseInt(document.getElementById('timer-secs')?.value)||90;
+  const modeLabel=mode==='teams'?(lang==='es'?'⚔️ Equipos':'⚔️ Teams'):(lang==='es'?'🤝 Coop':'🤝 Coop');
+  const themeLabel=theme==='football'?'⚽ Fútbol':'🌍 Clásica';
+  const livesLabel=lives>0?`❤️ ${lives} vida${lives>1?'s':''}`:(lang==='es'?'Sin vidas':'No lives');
+  const timerLabel=useTimer?`⏱️ ${timerSecs}s`:(lang==='es'?'Sin timer':'No timer');
+  const chips=[
+    {label:modeLabel,active:true},
+    {label:`${size}×${size}`,active:false},
+    {label:themeLabel,active:false},
+    {label:livesLabel,active:lives>0},
+    {label:timerLabel,active:useTimer},
+  ];
+  container.innerHTML=chips.map(ch=>`<span class="settings-chip${ch.active?' active':''}">${ch.label}</span>`).join('');
+  if(editBtn) editBtn.style.display=hostView?'':'none';
+}
+
+window.openSettingsEdit=()=>{
+  // Hide waiting section, show create section (settings form) without clearing the room
+  document.getElementById('waiting-section').style.display='none';
+  document.getElementById('create-section').style.display='';
+  // Show a "confirm changes" button instead of "create room"
+  const createBtn=document.getElementById('btn-create');
+  if(createBtn){createBtn.textContent=lang==='es'?'Guardar cambios →':'Save changes →';createBtn.onclick=saveSettingsEdit;}
+};
+
+window.saveSettingsEdit=async()=>{
+  if(!roomRef) return;
+  const useTimer=document.getElementById('timer-toggle').checked;
+  const timerSecs=parseInt(document.getElementById('timer-secs').value)||90;
+  await update(roomRef,{useTimer,timerSecs,maxLives:selectedLives,mode:selectedMode,numTeams,gridSize:selectedSize,theme:selectedTheme});
+  // Restore UI
+  document.getElementById('create-section').style.display='none';
+  document.getElementById('waiting-section').style.display='';
+  const createBtn=document.getElementById('btn-create');
+  if(createBtn){createBtn.textContent=t('createBtn');createBtn.onclick=createRoom;}
+  renderSettingsSummary(true);
+};
+
 // ── LOBBY PLAYERS ─────────────────────────────────────────────
 function renderLobbyPlayers(players){
   const list=document.getElementById('lobby-players-list');
   if(!list) return;
+  // Refresh settings summary if we have room data
+  if(!isHost && gstate){
+    renderSettingsSummaryFromRoom(gstate);
+  } else if(isHost){
+    renderSettingsSummary(true);
+  }
   list.innerHTML='';
   players.forEach((p,i)=>{
     const chip=document.createElement('div');chip.className='player-chip';
@@ -2151,6 +2373,17 @@ function getMyTeam(g){
 function currentTarget(g){
   const gs=new Set(g.guessed||[]);
   const ms=new Set(g.missed||[]);
+  const mode=g.mode||'coop';
+  if(mode==='teams'&&g.teams){
+    // In teams mode: the target is the active team's next unguessed/unmissed cell
+    const at=g.currentTeam||1;
+    const teamCells=g.teams[at]?.assignedCells||[];
+    for(const cell of teamCells){
+      if(!gs.has(cell)&&!ms.has(cell)) return cell;
+    }
+    // All of active team's cells done — game should have ended, but just in case:
+    return null;
+  }
   for(let i=0;i<(g.targetOrder||[]).length;i++){
     const cell=g.targetOrder[i];
     if(!gs.has(cell)&&!ms.has(cell))return cell;
@@ -2438,21 +2671,32 @@ window.onCellClick=async(r,c)=>{
     playSound('correct');
     newGuessed.push(`${r},${c}`);newTargetIndex++;
     if(mode==='teams'&&g.teams){
-      // Find owner team of this cell
-      let ownerTeam=0; // 0 = neutral
-      for(let n=1;n<=(g.numTeams||2);n++){
-        if((g.teams[n]?.assignedCells||[]).includes(`${r},${c}`)){ownerTeam=n;break;}
-      }
-      // If neutral, ownerTeam=0 (no points). Store as 0 for gray display.
-      newGbt[`${r},${c}`]=ownerTeam;
+      // Owner is the active team (since currentTarget always returns active team's cell)
+      const at=g.currentTeam||1;
+      newGbt[`${r},${c}`]=at;
     }
     newLog.push({icon:'✅',text:t('correctLog',g.currentClue,g.rowWords[tr],g.colWords[tc])});
-    if(newGuessed.length>=G*G){
+    // Win condition for teams: all teams have no more cells to play
+    let gameOver=false;
+    if(mode==='teams'&&g.teams){
+      const nt=g.numTeams||2;
+      const newGuessedSet=new Set(newGuessed);
+      const newMissedSet=new Set(newMissed);
+      gameOver=true;
+      for(let n=1;n<=nt;n++){
+        const teamCells=g.teams[n]?.assignedCells||[];
+        if(teamCells.some(cell=>!newGuessedSet.has(cell)&&!newMissedSet.has(cell))){
+          gameOver=false;break;
+        }
+      }
+    } else {
+      gameOver=newGuessed.length>=G*G;
+    }
+    if(gameOver){
       const wu={guessed:newGuessed,guessedByTeam:newGbt,targetIndex:newTargetIndex,
         log:newLog,phase:'giving',currentClue:'',timerStartedAt:null};
       if(mode==='teams'&&g.teams){
         const newTeams=deepCopy(g.teams);
-        // Award points by cell owner
         for(const[,tn]of Object.entries(newGbt)){
           const tNum=parseInt(tn);
           if(tNum>0&&newTeams[tNum]) newTeams[tNum].score=(newTeams[tNum].score||0)+1;
@@ -2523,13 +2767,23 @@ function advanceTurn(g,players,newGuessed,newMissed,newLog,newTargetIndex,newGbt
   };
   if(mode==='teams'&&g.teams){
     const at=g.currentTeam||1;const nt=g.numTeams||2;
-    const nextTeam=at>=nt?1:at+1;
     const newTeams=deepCopy(g.teams);
     newTeams[at].giverIndex=((newTeams[at].giverIndex||0)+1)%Math.max(newTeams[at].players.length,1);
+    // Recalculate scores from guessedByTeam
     for(let n=1;n<=nt;n++) newTeams[n].score=0;
     for(const[,tn]of Object.entries(newGbt)){
       const tNum=parseInt(tn);
       if(tNum>0&&newTeams[tNum]) newTeams[tNum].score=(newTeams[tNum].score||0)+1;
+    }
+    // Find next team that still has cells to play
+    const newGuessedSet=new Set(newGuessed);const newMissedSet=new Set(newMissed);
+    let nextTeam=at;
+    for(let i=1;i<=nt;i++){
+      const candidate=((at-1+i)%nt)+1;
+      const teamCells=newTeams[candidate]?.assignedCells||[];
+      if(teamCells.some(cell=>!newGuessedSet.has(cell)&&!newMissedSet.has(cell))){
+        nextTeam=candidate;break;
+      }
     }
     upd.currentTeam=nextTeam;upd.teams=newTeams;
   } else {
@@ -2913,6 +3167,10 @@ function resetToLobby(){
   if(lobbyColumnsR) lobbyColumnsR.style.gridTemplateColumns='';
   ['waiting-section','join-status','teams-config'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('join-code').value='';
+  const _editBtn=document.getElementById('btn-edit-settings');
+  if(_editBtn) _editBtn.style.display='none';
+  const _chips=document.getElementById('settings-chips');
+  if(_chips) _chips.innerHTML='';
   document.getElementById('log-scroll').innerHTML='';
   document.getElementById('start-game-btn').style.display='';
   document.getElementById('mode-btn-coop').classList.add('active');
