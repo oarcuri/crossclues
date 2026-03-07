@@ -1049,6 +1049,10 @@ body::after{
         <div class="players-in-room">
           <span class="section-lbl" id="lbl-players-joined">Jugadores en la sala</span>
           <div class="players-list" id="lobby-players-list"></div>
+          <div class="name-edit-row" id="name-edit-row" style="margin-top:.55rem;display:flex;gap:.4rem;align-items:center">
+            <input type="text" class="field name-edit-field" id="waiting-name-input" maxlength="20" placeholder="Tu nombre" style="flex:1;padding:.38rem .65rem;font-size:.88rem">
+            <button class="settings-edit-btn" onclick="updateMyName()" style="white-space:nowrap">✓ Cambiar nombre</button>
+          </div>
         </div>
         <div id="teams-config" style="display:none;margin-top:.85rem">
           <span class="section-lbl" id="lbl-assign-teams">Asignar jugadores a equipos</span>
@@ -1967,6 +1971,17 @@ window.selectMode=(mode)=>{
   selectedMode=mode;
   document.getElementById('mode-btn-coop').classList.toggle('active',mode==='coop');
   document.getElementById('mode-btn-teams').classList.toggle('active',mode==='teams');
+  // Teams mode doesn't use lives — hide the option and reset it
+  const livesRow=document.getElementById('lives-row');
+  if(livesRow) livesRow.style.display=mode==='teams'?'none':'';
+  if(mode==='teams'){
+    // Reset lives to 0 silently
+    const lt=document.getElementById('lives-toggle');
+    const ls=document.getElementById('lives-select');
+    if(lt){lt.checked=false;}
+    if(ls){ls.disabled=true;}
+    selectedLives=0;
+  }
 };
 window.selectSize=(g)=>{
   selectedSize=g;
@@ -2025,6 +2040,8 @@ window.createRoom=async()=>{
   if(lobbyColumns) lobbyColumns.style.gridTemplateColumns='1fr';
   document.getElementById('waiting-section').style.display='';
   document.getElementById('room-code-value').textContent=roomId;
+  const wni=document.getElementById('waiting-name-input');
+  if(wni) wni.value=myName;
   listenRoom();
   renderSettingsSummary(true);
 };
@@ -2055,10 +2072,10 @@ window.joinRoom=async()=>{
   if(lobbyColumns2) lobbyColumns2.style.gridTemplateColumns='1fr';
   document.getElementById('waiting-section').style.display='';
   document.getElementById('room-code-value').textContent=roomId;
+  const wni=document.getElementById('waiting-name-input');
+  if(wni) wni.value=myName;
   document.getElementById('start-game-btn').style.display='none';
   document.getElementById('teams-config').style.display='none';
-  // Show settings summary for joining player (based on room data)
-  const _snap=await get(roomRef);
 };
 function showJoinError(msg){const el=document.getElementById('join-status');el.textContent=msg;el.className='status-msg error';el.style.display='';}
 
@@ -2185,6 +2202,8 @@ window.openSettingsEdit=()=>{
     ['coop','teams'].forEach(m=>document.getElementById('mode-btn-'+m)?.classList.toggle('active',m===selectedMode));
     [3,4,5,6].forEach(n=>document.getElementById('size-btn-'+n)?.classList.toggle('active',n===selectedSize));
     ['classic','football'].forEach(th=>document.getElementById('theme-btn-'+th)?.classList.toggle('active',th===selectedTheme));
+    const livesRow=document.getElementById('lives-row');
+    if(livesRow) livesRow.style.display=selectedMode==='teams'?'none':'';
   }
   document.getElementById('waiting-section').style.display='none';
   document.getElementById('create-section').style.display='';
@@ -2203,6 +2222,21 @@ window.saveSettingsEdit=async()=>{
   const createBtn=document.getElementById('btn-create');
   if(createBtn){createBtn.textContent=t('createBtn');createBtn.onclick=createRoom;}
   renderSettingsSummary(true);
+};
+
+window.updateMyName=async()=>{
+  const input=document.getElementById('waiting-name-input');
+  if(!input||!roomRef||!myPlayerId) return;
+  const newName=input.value.trim();
+  if(!newName) return;
+  myName=newName;
+  try{localStorage.setItem('cc_last_name',newName);}catch(e){}
+  const snap=await get(roomRef);
+  if(!snap.exists()) return;
+  const data=snap.val();
+  const players=(data.players||[]).map(p=>p.id===myPlayerId?{...p,name:newName}:p);
+  await update(roomRef,{players});
+  showToast(lang==='es'?'Nombre actualizado':'Name updated');
 };
 
 // ── LOBBY PLAYERS ─────────────────────────────────────────────
@@ -2643,47 +2677,90 @@ window.onCellClick=async(r,c)=>{
     await update(ref(db,`rooms/${roomId}/game`),upd);
   } else {
     playSound('wrong');
-    const wrongKey=`${r},${c}`;const correctKey=`${tr},${tc}`;
-    // Find owner of the wrongly-chosen cell (for colored flash)
-    let wrongCellOwner=0;
+    const wrongKey=`${r},${c}`;
+    stopLocalTimer();
+
     if(mode==='teams'&&g.teams){
+      // In teams mode: wrong guess means the active team missed their cell.
+      // The clicked cell (wrongKey) is awarded to whoever owns it (or neutral).
+      // The correct target cell is also resolved — awarded to whoever owns it.
+      const at=g.currentTeam||1;
+      // Find owner of wrongly-clicked cell
+      let wrongCellOwner=0;
       for(let n=1;n<=(g.numTeams||2);n++){
         if((g.teams[n]?.assignedCells||[]).includes(wrongKey)){wrongCellOwner=n;break;}
       }
-    }
-    newLog.push({icon:'❌',text:t('wrongLog',g.currentClue,g.rowWords[tr],g.colWords[tc])});
-    showToast(t('wrongMsg',g.currentClue,g.rowWords[tr],g.colWords[tc]));
-    const _maxLives=gstate?.maxLives||0;
-    stopLocalTimer();
-    // Add the CORRECT cell to missed permanently (shown red)
-    const missedKey=`${tr},${tc}`;
-    if(!newMissed.includes(missedKey)) newMissed.push(missedKey);
-    newTargetIndex++;
-    // Check if game over: no lives mode → always; lives mode → when lives exhausted
-    const _livesUsed=newMissed.length;
-    const _gameOver=(_maxLives===0)||(_livesUsed>=_maxLives);
-    if(_gameOver){
-      newLog.push({icon:'💥',text:'GAME OVER'});
-      await update(ref(db,`rooms/${roomId}/game`),{
-        guessed:newGuessed,missed:newMissed,targetIndex:newTargetIndex,
-        log:newLog,phase:'giving',currentClue:'',timerStartedAt:null,
-        gameOverCell:`${tr},${tc}`,gameOverClue:g.currentClue,
-        gameOverRow:g.rowWords[tr],gameOverCol:g.colWords[tc],
-        wrongChosenCell:wrongKey,correctFlashCell:correctKey,
-        wrongChosenTeam:wrongCellOwner,
-      });
-      setTimeout(async()=>{ await update(roomRef,{status:'gameover'}); },4000);
+      // Find owner of correct target cell
+      let correctCellOwner=0;
+      for(let n=1;n<=(g.numTeams||2);n++){
+        if((g.teams[n]?.assignedCells||[]).includes(`${tr},${tc}`)){correctCellOwner=n;break;}
+      }
+      // Mark both cells as guessed/resolved
+      if(!newGuessed.includes(wrongKey)) newGuessed.push(wrongKey);
+      if(!newGuessed.includes(`${tr},${tc}`)) newGuessed.push(`${tr},${tc}`);
+      newGbt[wrongKey]=wrongCellOwner;
+      newGbt[`${tr},${tc}`]=correctCellOwner;
+      newTargetIndex++;
+      const wrongOwnerLabel=wrongCellOwner>0?TEAM_COLORS[wrongCellOwner].label:'neutra';
+      const correctOwnerLabel=correctCellOwner>0?TEAM_COLORS[correctCellOwner].label:'neutra';
+      newLog.push({icon:'❌',text:`${g.currentClue}: celda ${String.fromCharCode(65+tr)}${tc+1} era ${correctOwnerLabel}. Se eligió ${String.fromCharCode(65+r)}${c+1} (${wrongOwnerLabel})`});
+      // Check win condition
+      const newGuessedSet=new Set(newGuessed);const newMissedSet=new Set(newMissed);
+      const nt=g.numTeams||2;
+      let gameOver=true;
+      for(let n=1;n<=nt;n++){
+        if((g.teams[n]?.assignedCells||[]).some(cell=>!newGuessedSet.has(cell)&&!newMissedSet.has(cell))){gameOver=false;break;}
+      }
+      if(gameOver){
+        const wu={guessed:newGuessed,guessedByTeam:newGbt,targetIndex:newTargetIndex,log:newLog,phase:'giving',currentClue:'',timerStartedAt:null};
+        const newTeams=deepCopy(g.teams);
+        for(const[,tn]of Object.entries(newGbt)){const tNum=parseInt(tn);if(tNum>0&&newTeams[tNum])newTeams[tNum].score=(newTeams[tNum].score||0)+1;}
+        wu.teams=newTeams;
+        await update(ref(db,`rooms/${roomId}/game`),wu);
+        await update(roomRef,{status:'ended'});
+      } else {
+        const upd=advanceTurn(g,players,newGuessed,newMissed,newLog,newTargetIndex,newGbt,false,tr,tc);
+        upd.wrongChosenCell=wrongKey;
+        upd.wrongChosenTeam=wrongCellOwner;
+        upd.correctFlashCell=`${tr},${tc}`;
+        await update(ref(db,`rooms/${roomId}/game`),upd);
+        setTimeout(async()=>{
+          await update(ref(db,`rooms/${roomId}/game`),{wrongChosenCell:null,wrongChosenTeam:null,correctFlashCell:null});
+        },3000);
+      }
     } else {
-      // Still has lives — advance turn, show colored wrongChosen for 4s then clear from Firebase
-      newLog.push({icon:'💔',text:`Error — quedan ${_maxLives-_livesUsed} vida(s)`});
-      const upd=advanceTurn(g,players,newGuessed,newMissed,newLog,newTargetIndex,newGbt,false,tr,tc);
-      upd.wrongChosenCell=wrongKey;
-      upd.wrongChosenTeam=wrongCellOwner;
-      upd.correctFlashCell=null;
-      await update(ref(db,`rooms/${roomId}/game`),upd);
-      setTimeout(async()=>{
-        await update(ref(db,`rooms/${roomId}/game`),{wrongChosenCell:null,wrongChosenTeam:null});
-      },4000);
+      // COOP / normal mode: wrong guess uses lives / game over logic
+      const wrongCellOwner=0;
+      newLog.push({icon:'❌',text:t('wrongLog',g.currentClue,g.rowWords[tr],g.colWords[tc])});
+      showToast(t('wrongMsg',g.currentClue,g.rowWords[tr],g.colWords[tc]));
+      const _maxLives=gstate?.maxLives||0;
+      const missedKey=`${tr},${tc}`;
+      if(!newMissed.includes(missedKey)) newMissed.push(missedKey);
+      newTargetIndex++;
+      const _livesUsed=newMissed.length;
+      const _gameOver=(_maxLives===0)||(_livesUsed>=_maxLives);
+      if(_gameOver){
+        newLog.push({icon:'💥',text:'GAME OVER'});
+        await update(ref(db,`rooms/${roomId}/game`),{
+          guessed:newGuessed,missed:newMissed,targetIndex:newTargetIndex,
+          log:newLog,phase:'giving',currentClue:'',timerStartedAt:null,
+          gameOverCell:`${tr},${tc}`,gameOverClue:g.currentClue,
+          gameOverRow:g.rowWords[tr],gameOverCol:g.colWords[tc],
+          wrongChosenCell:`${r},${c}`,correctFlashCell:`${tr},${tc}`,
+          wrongChosenTeam:0,
+        });
+        setTimeout(async()=>{ await update(roomRef,{status:'gameover'}); },4000);
+      } else {
+        newLog.push({icon:'💔',text:`Error — quedan ${_maxLives-_livesUsed} vida(s)`});
+        const upd=advanceTurn(g,players,newGuessed,newMissed,newLog,newTargetIndex,newGbt,false,tr,tc);
+        upd.wrongChosenCell=`${r},${c}`;
+        upd.wrongChosenTeam=0;
+        upd.correctFlashCell=null;
+        await update(ref(db,`rooms/${roomId}/game`),upd);
+        setTimeout(async()=>{
+          await update(ref(db,`rooms/${roomId}/game`),{wrongChosenCell:null,wrongChosenTeam:null});
+        },4000);
+      }
     }
   }
 };
