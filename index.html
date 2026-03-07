@@ -2291,23 +2291,26 @@ function renderLobbyPlayers(players){
       input.id='waiting-name-input';
       input.className='player-name-input';
       input.title=lang==='es'?'Tocá para editar tu nombre':'Tap to edit your name';
-      const pencil=document.createElement('span');
-      pencil.textContent='✏️';
-      pencil.style.cssText='font-size:.7rem;opacity:.5;cursor:text;flex-shrink:0;';
-      pencil.onclick=()=>input.focus();
       const saveBtn=document.createElement('button');
       saveBtn.className='name-save-btn';saveBtn.textContent='✓';
       saveBtn.title=lang==='es'?'Guardar':'Save';
       saveBtn.style.display=editingValue!==null&&editingValue!==p.name?'':'none';
+      // Pencil icon shown when not editing, hidden when save btn is visible
+      const pencil=document.createElement('span');
+      pencil.textContent='✏️';
+      pencil.style.cssText='font-size:.65rem;opacity:.4;cursor:text;flex-shrink:0;margin-left:.1rem;';
+      pencil.onclick=()=>input.focus();
       input.addEventListener('input',()=>{
-        saveBtn.style.display=input.value.trim()&&input.value.trim()!==myName?'':'none';
+        const changed=input.value.trim()&&input.value.trim()!==myName;
+        saveBtn.style.display=changed?'':'none';
+        pencil.style.display=changed?'none':'';
       });
       input.addEventListener('keydown',(e)=>{
         if(e.key==='Enter'){e.preventDefault();updateMyName();}
-        if(e.key==='Escape'){input.value=myName;saveBtn.style.display='none';}
+        if(e.key==='Escape'){input.value=myName;saveBtn.style.display='none';pencil.style.display='';}
       });
       saveBtn.addEventListener('click',updateMyName);
-      chip.appendChild(dot);chip.appendChild(pencil);chip.appendChild(input);chip.appendChild(saveBtn);
+      chip.appendChild(dot);chip.appendChild(input);chip.appendChild(pencil);chip.appendChild(saveBtn);
       list.appendChild(chip);
       // Restore focus if was editing
       if(editingValue!==null) setTimeout(()=>{input.focus();input.setSelectionRange(input.value.length,input.value.length);},0);
@@ -3318,21 +3321,27 @@ let lobbyMusicCtx=null, lobbyMusicPlaying=false, lobbyMusicNodes=[];
 let lobbyBeatTime=0, _beat=0, _melodyIdx=0;
 let _musicAutoStarted=false;
 
-// Upbeat pop-funk progression: C7 → F7 → G7 → F7 (funky & energetic)
+// "Muchachos" - iconic Argentina World Cup song, 8-bit videogame version
+// Key of C, ~130 BPM march feel
+// Melody: main hook "Muchachos, ahora nos volvimos a ilusionar..."
+// Notes as frequencies (Hz): C4=261.63 D4=293.66 E4=329.63 F4=349.23 G4=392 A4=440 B4=493.88
+// C5=523.25 D5=587.33 E5=659.26 F5=698.46 G5=783.99 A5=880
 const LOBBY_CHORDS=[
-  [261.63,329.63,392.00,466.16], // C7
-  [349.23,440.00,523.25,622.25], // F7
-  [392.00,493.88,587.33,698.46], // G7
-  [349.23,440.00,523.25,622.25], // F7
+  [261.63,329.63,392.00,523.25], // C maj
+  [220.00,277.18,329.63,440.00], // Am
+  [174.61,220.00,261.63,349.23], // F
+  [196.00,246.94,293.66,392.00], // G
 ];
-const LOBBY_BASS=[65.41,87.31,98.00,87.31]; // C2 F2 G2 F2
-// Catchy 16-step melody (each step = 1 eighth note)
+const LOBBY_BASS=[65.41,55.00,87.31,49.00]; // C2 A1 F2 G1
+// Main "Muchachos" hook melody — 32 steps, each = 1 eighth note
+// "Mu-cha-chos  a-ho-ra  nos-vol-vi-mos  a i-lu-sio-nar"
 const MEL=[
-  523.25,null,659.26,523.25, 587.33,null,698.46,659.26,
-  523.25,659.26,null,587.33, 523.25,null,493.88,null,
+  392.00,392.00,392.00,null,  523.25,523.25,440.00,null,
+  392.00,329.63,null,329.63,  349.23,null,392.00,null,
+  440.00,440.00,440.00,null,  523.25,659.26,587.33,null,
+  523.25,440.00,null,392.00,  329.63,null,null,null,
 ];
-// Chord arpeggiation offsets (in 8th notes within a bar)
-const ARP_STEPS=[0,2,3,5,6,8,9,11];
+const ARP_STEPS=[0,3,8,11];
 
 function lobbyMusicInit(){
   if(lobbyMusicCtx) return;
@@ -3357,24 +3366,25 @@ function lobbyMusicStop(){
 
 function lobbyScheduleLoop(){
   if(!lobbyMusicPlaying||!lobbyMusicCtx) return;
-  const BPM=118, EIGHTH=60/BPM/2, ctx=lobbyMusicCtx;
-  const BAR=16; // 16 eighth notes per bar
+  const BPM=130, EIGHTH=60/BPM/2, ctx=lobbyMusicCtx;
+  const BAR=32; // 32 eighth notes per bar (2 bars per chord)
   while(lobbyBeatTime < ctx.currentTime + 2.5){
     const t=lobbyBeatTime;
     const barPos=_beat%BAR;
     const chordPos=Math.floor(_beat/BAR)%LOBBY_CHORDS.length;
     const chord=LOBBY_CHORDS[chordPos];
 
-    // Kick: steps 0, 6, 8, 14 (four-on-the-floor variant)
-    if(barPos===0||barPos===6||barPos===8||barPos===14) schedKick(ctx,t);
+    // Kick: strong march beat (0, 8) + accent (4, 12)
+    if(barPos===0||barPos===8) schedKick(ctx,t,1.0);
+    if(barPos===4||barPos===12) schedKick(ctx,t,0.6);
 
-    // Snare: steps 4 and 12
+    // Snare: on 4 and 12 (backbeat)
     if(barPos===4||barPos===12) schedSnare(ctx,t);
 
     // Hi-hat: every step, accent on even steps
     schedHat(ctx,t,barPos%2===0?0.07:0.04);
 
-    // Open hat on upbeats 2 & 10
+    // Open hat on upbeats
     if(barPos===2||barPos===10) schedHat(ctx,t,0.1,true);
 
     // Bass: hits on 0, 3, 6, 8, 11, 14 (syncopated funk pattern)
@@ -3495,9 +3505,7 @@ window.toggleLobbyMusic=()=>{
   if(lobbyMusicPlaying){
     lobbyMusicStop();
     _updateMusicBtn(false);
-    try{localStorage.removeItem('cc_music_ok');}catch(e){}
   } else {
-    try{localStorage.setItem('cc_music_ok','1');}catch(e){}
     _startMusicUI();
   }
 };
@@ -3527,24 +3535,8 @@ function _updateMusicBtn(playing){
   const btn=document.getElementById('btn-music-lobby');
   if(btn){btn.textContent=playing?'🔇':'🎵';btn.classList.toggle('playing',playing);}
 }
-// First-click handler for new visitors
-function _tryAutoStartMusic(){
-  if(_musicAutoStarted||lobbyMusicPlaying) return;
-  _musicAutoStarted=true;
-  document.removeEventListener('click',_tryAutoStartMusic,true);
-  document.removeEventListener('keydown',_tryAutoStartMusic,true);
-  try{localStorage.setItem('cc_music_ok','1');}catch(e){}
-  _startMusicUI();
-}
-document.addEventListener('click',_tryAutoStartMusic,true);
-document.addEventListener('keydown',_tryAutoStartMusic,true);
-// Auto-start immediately if returning visitor (already gave gesture before)
-try{
-  if(localStorage.getItem('cc_music_ok')==='1'){
-    // Slight delay so page is ready
-    setTimeout(()=>{ if(!lobbyMusicPlaying) _startMusicUI(); }, 300);
-  }
-}catch(e){}
+
+
 
 // Stop music when leaving lobby
 function stopLobbyMusicIfPlaying(){
