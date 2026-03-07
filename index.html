@@ -2237,24 +2237,36 @@ window.updateMyName=async()=>{
   if(!input||!roomRef||!myPlayerId) return;
   const newName=input.value.trim();
   if(!newName||newName===myName) return;
+  // Update local name immediately before any async ops
+  const oldName=myName;
   myName=newName;
   try{localStorage.setItem('cc_last_name',newName);}catch(e){}
   const saveBtn=input.parentElement?.querySelector('.name-save-btn');
   if(saveBtn) saveBtn.style.display='none';
-  const players=((gstate?.players)||[]).map(p=>p.id===myPlayerId?{...p,name:newName}:p);
-  await update(roomRef,{players});
-  showToast(lang==='es'?'✓ Nombre actualizado':'✓ Name updated');
+  // Read fresh from Firebase to avoid stale gstate race condition
+  try{
+    const snap=await get(roomRef);
+    if(!snap.exists()){myName=oldName;return;}
+    const freshPlayers=(snap.val().players||[]).map(p=>p.id===myPlayerId?{...p,name:newName}:p);
+    await update(roomRef,{players:freshPlayers});
+    showToast(lang==='es'?'✓ Nombre actualizado':'✓ Name updated');
+  }catch(e){myName=oldName;}
 };
 
 // ── LOBBY PLAYERS ─────────────────────────────────────────────
 function renderLobbyPlayers(players){
   const list=document.getElementById('lobby-players-list');
   if(!list) return;
+  // Preserve input value if user is mid-edit
+  const existingInput=document.getElementById('waiting-name-input');
+  const editingValue=existingInput&&document.activeElement===existingInput?existingInput.value:null;
+
   list.innerHTML='';
   players.forEach((p,i)=>{
     const color=PLAYER_COLORS[i%PLAYER_COLORS.length];
     if(p.id===myPlayerId){
-      // Own chip: inline editable input
+      // Sync myName from server (in case another client changed it)
+      if(p.name!==myName) myName=p.name;
       const chip=document.createElement('div');
       chip.className='player-chip player-chip-self';
       chip.style.cssText='flex:none;gap:.4rem;padding:.2rem .35rem .2rem .5rem;';
@@ -2262,14 +2274,15 @@ function renderLobbyPlayers(players){
       dot.style.background=color;
       const input=document.createElement('input');
       input.type='text';input.maxLength=20;
-      input.value=p.name;
+      // Keep editing value if user was mid-type, otherwise show server name
+      input.value=editingValue!==null?editingValue:p.name;
       input.id='waiting-name-input';
       input.className='player-name-input';
-      input.title=lang==='es'?'Editá tu nombre':'Edit your name';
+      input.title=lang==='es'?'Tocá para editar tu nombre':'Tap to edit your name';
       const saveBtn=document.createElement('button');
       saveBtn.className='name-save-btn';saveBtn.textContent='✓';
       saveBtn.title=lang==='es'?'Guardar':'Save';
-      saveBtn.style.display='none';
+      saveBtn.style.display=editingValue!==null&&editingValue!==p.name?'':'none';
       input.addEventListener('input',()=>{
         saveBtn.style.display=input.value.trim()&&input.value.trim()!==myName?'':'none';
       });
@@ -2280,6 +2293,8 @@ function renderLobbyPlayers(players){
       saveBtn.addEventListener('click',updateMyName);
       chip.appendChild(dot);chip.appendChild(input);chip.appendChild(saveBtn);
       list.appendChild(chip);
+      // Restore focus if was editing
+      if(editingValue!==null) setTimeout(()=>{input.focus();input.setSelectionRange(input.value.length,input.value.length);},0);
     } else {
       const chip=document.createElement('div');chip.className='player-chip';
       const dot=document.createElement('div');dot.className='player-chip-dot';
@@ -3423,16 +3438,31 @@ window.toggleLobbyMusic=()=>{
 
 // Autostart on first user interaction (browser requires gesture)
 function _tryAutoStartMusic(){
-  if(_musicAutoStarted) return;
+  if(_musicAutoStarted||lobbyMusicPlaying) return;
   _musicAutoStarted=true;
-  document.removeEventListener('click',_tryAutoStartMusic);
-  document.removeEventListener('keydown',_tryAutoStartMusic);
+  document.removeEventListener('click',_tryAutoStartMusic,true);
+  document.removeEventListener('keydown',_tryAutoStartMusic,true);
+  // Create AudioContext synchronously inside the event handler — required by browsers
+  if(!lobbyMusicCtx){
+    try{ lobbyMusicCtx=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){return;}
+  }
+  // Start immediately (we're inside the user gesture)
+  if(lobbyMusicCtx.state==='suspended'){
+    lobbyMusicCtx.resume().then(()=>{ _startMusicUI(); });
+  } else {
+    _startMusicUI();
+  }
+}
+function _startMusicUI(){
+  if(lobbyMusicPlaying) return;
+  lobbyMusicPlaying=true;
+  lobbyBeatTime=lobbyMusicCtx.currentTime+0.05;
+  lobbyScheduleLoop();
   const btn=document.getElementById('btn-music-lobby');
-  lobbyMusicStart();
   if(btn){btn.textContent='🔇';btn.classList.add('playing');}
 }
-document.addEventListener('click',_tryAutoStartMusic);
-document.addEventListener('keydown',_tryAutoStartMusic);
+document.addEventListener('click',_tryAutoStartMusic,true);
+document.addEventListener('keydown',_tryAutoStartMusic,true);
 
 // Stop music when leaving lobby
 function stopLobbyMusicIfPlaying(){
